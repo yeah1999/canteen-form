@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>明日用餐需求统计</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f0f2f5; min-height: 100vh; color: #333;
+}
+.container { max-width: 540px; margin: 0 auto; padding: 16px; }
+
+/* 页面切换 */
+.page { display: none; }
+.page.active { display: block; }
+
+/* 卡片 */
+.card {
+  background: #fff; border-radius: 16px; padding: 24px; margin-bottom: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+/* 标题 */
+h1 { font-size: 22px; color: #1a1a1a; margin-bottom: 4px; }
+.subtitle { color: #888; font-size: 14px; margin-bottom: 20px; }
+
+/* 表单 */
+.label { font-size: 15px; font-weight: 600; color: #333; margin-bottom: 12px; display: block; }
+.name-input {
+  width: 100%; padding: 14px 16px; border: 2px solid #e0e0e0; border-radius: 12px;
+  font-size: 16px; margin-bottom: 20px; transition: border-color .2s;
+  outline: none;
+}
+.name-input:focus { border-color: #07c160; }
+.name-list {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;
+}
+.name-tag {
+  background: #f0f2f5; padding: 6px 14px; border-radius: 20px; font-size: 14px;
+  color: #666; cursor: pointer; transition: all .2s; border: 2px solid transparent;
+}
+.name-tag:hover { background: #e0e0e0; }
+.name-tag.selected { border-color: #07c160; background: #e8f5e9; color: #07c160; font-weight: 600; }
+
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 0; border-bottom: 1px solid #f0f0f0;
+}
+.toggle-row:last-child { border-bottom: none; }
+.toggle-label { font-size: 16px; color: #222; }
+.toggle-switch { position: relative; width: 50px; height: 30px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; cursor: pointer; inset: 0;
+  background: #ccc; border-radius: 15px; transition: .3s;
+}
+.toggle-slider::before {
+  content: ""; position: absolute; height: 24px; width: 24px;
+  left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s;
+}
+input:checked + .toggle-slider { background: #07c160; }
+input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+.btn {
+  width: 100%; padding: 16px; border: none; border-radius: 12px;
+  font-size: 17px; font-weight: 600; cursor: pointer; transition: opacity .2s;
+  margin-bottom: 10px;
+}
+.btn-green { background: #07c160; color: white; }
+.btn-green:hover { opacity: 0.85; }
+.btn-gray { background: #f5f5f5; color: #666; font-size: 14px; }
+
+/* 结果消息 */
+.result-msg {
+  padding: 14px; border-radius: 10px; margin-top: 16px; font-size: 15px;
+  text-align: center; display: none;
+}
+.result-ok { background: #e8f5e9; color: #2e7d32; display: block; }
+.result-err { background: #fff3e0; color: #e65100; display: block; }
+
+/* 汇总 */
+.summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.summary-card {
+  background: #f8f8f8; border-radius: 14px; padding: 20px; text-align: center;
+}
+.summary-num { font-size: 42px; font-weight: 700; color: #07c160; }
+.summary-label { font-size: 13px; color: #888; margin-top: 4px; }
+
+/* 明细表格 */
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { background: #f5f5f5; padding: 10px 8px; text-align: left; font-weight: 500; font-size: 12px; color: #888; }
+td { padding: 10px 8px; border-bottom: 1px solid #f0f0f0; }
+.badge-yes { display: inline-block; background: #e8f5e9; color: #2e7d32; padding: 2px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+.badge-no { display: inline-block; background: #ffeef0; color: #c62828; padding: 2px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+
+/* 导航 */
+.nav-tabs {
+  display: flex; gap: 8px; margin-bottom: 16px;
+}
+.nav-tab {
+  flex: 1; text-align: center; padding: 12px; border-radius: 12px;
+  background: #fff; text-decoration: none; font-weight: 600; font-size: 15px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: .2s;
+}
+.nav-tab.active { background: #07c160; color: white; }
+.nav-tab:not(.active) { color: #07c160; }
+
+/* ADM按钮 */
+.admin-btn {
+  text-align: center; padding: 12px; color: #999; font-size: 13px;
+  margin-top: 20px; cursor: pointer;
+}
+.admin-btn:hover { color: #07c160; }
+
+/* 日期选择 */
+.date-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.date-nav span { font-size: 14px; color: #666; }
+.date-nav button {
+  background: none; border: 1px solid #ddd; border-radius: 8px;
+  padding: 6px 12px; font-size: 14px; cursor: pointer; color: #333;
+}
+
+/* 加载 */
+.loading { text-align: center; padding: 30px; color: #999; font-size: 14px; }
+.loading::after { content: "⏳ 加载中..."; }
+
+/* 空状态 */
+.empty { text-align: center; padding: 20px; color: #ccc; font-size: 14px; }
+
+/* tab切换日期 */
+.date-tabs {
+  display: flex; gap: 6px; margin-bottom: 16px;
+}
+.date-tab {
+  flex: 1; text-align: center; padding: 10px; border-radius: 10px;
+  background: #f5f5f5; font-size: 13px; color: #666; cursor: pointer;
+  transition: .2s; border: none;
+}
+.date-tab.active { background: #07c160; color: white; font-weight: 600; }
+
+.footer { text-align: center; padding: 20px; font-size: 12px; color: #ccc; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<!-- ======== 表单页 ======== -->
+<div id="page-form" class="page active">
+  <div class="card">
+    <h1>🍱 明日用餐需求统计</h1>
+    <p class="subtitle">请选择明天的早餐/午餐</p>
+
+    <div id="form-main">
+      <label class="label">您的姓名</label>
+      <input id="nameInput" class="name-input" placeholder="请输入您的姓名" autocomplete="name">
+      <div class="name-list" id="nameQuickSelect"></div>
+
+      <label class="label">请选择用餐</label>
+      <div class="toggle-row">
+        <span class="toggle-label">🌅 早餐</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="breakfastCb" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">🍱 午餐</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="lunchCb" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <button class="btn btn-green" onclick="submitForm()">✓ 提交登记</button>
+    </div>
+
+    <div id="resultMsg" class="result-msg"></div>
+    <button class="btn btn-gray" id="resetBtn" style="display:none" onclick="resetForm()">返回修改</button>
+  </div>
+
+  <div id="form-summary" class="card" style="display:none"></div>
+
+  <div class="admin-btn" onclick="switchPage('admin')">📊 管理后台</div>
+  <div class="footer">食堂用餐统计系统</div>
+</div>
+
+<!-- ======== 管理后台 ======== -->
+<div id="page-admin" class="page">
+  <div class="nav-tabs">
+    <a class="nav-tab" href="javascript:switchPage('form')">📝 填表</a>
+    <a class="nav-tab active">📊 后台</a>
+  </div>
+
+  <div class="card">
+    <h1>📊 食堂用餐统计</h1>
+    <p class="subtitle" id="adminDateLabel"></p>
+
+    <div class="date-tabs" id="dateTabs">
+      <button class="date-tab" data-offset="-1">前一天</button>
+      <button class="date-tab active" data-offset="0">今天</button>
+      <button class="date-tab" data-offset="1">明天</button>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-num" id="breakfastCount">-</div>
+        <div class="summary-label">🌅 早餐人数</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-num" id="lunchCount">-</div>
+        <div class="summary-label">🍱 午餐人数</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p style="font-weight:600;margin-bottom:12px">📋 早餐明细</p>
+    <div id="breakfastList"><div class="empty">暂无数据</div></div>
+  </div>
+
+  <div class="card">
+    <p style="font-weight:600;margin-bottom:12px">📋 午餐明细</p>
+    <div id="lunchList"><div class="empty">暂无数据</div></div>
+  </div>
+
+  <div class="footer">食堂用餐统计系统</div>
+</div>
+
+</div>
+
+<script>
+// ── Supabase配置 ──────────────────────────────────────
+const SUPABASE_URL = "https://odinyodmtnautkqkisee.supabase.co";
+const SUPABASE_KEY = "sb_publishable_md8uJNs22RE2gn26ZGcr0g_ukWwItha";
+const API_BASE = SUPABASE_URL + "/rest/v1";
+// ──────────────────────────────────────────────────────
+
+const HEADERS = {
+  "Content-Type": "application/json",
+  "apikey": SUPABASE_KEY,
+  "Authorization": `Bearer ${SUPABASE_KEY}`,
+  "Prefer": "return=minimal"
+};
+
+let currentDate = new Date();
+let historyNames = [];
+
+// ── 日期工具 ───────────────────────────────────────────
+function formatDate(d) {
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function displayDate(d) {
+  return `${d.getMonth()+1}月${d.getDate()}日 ${['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]}`;
+}
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+
+// ── Supabase API ───────────────────────────────────────
+async function fetchSummary(dateStr) {
+  // 获取该日期的所有记录
+  const url = `${API_BASE}/meals?date=eq.${dateStr}&select=*`;
+  const res = await fetch(url, { headers: HEADERS });
+  if (!res.ok) return null;
+  const rows = await res.json();
+  return rows || [];
+}
+
+async function submitMeal(name, dateStr, breakfast, lunch) {
+  // 先查是否已有记录
+  const url = `${API_BASE}/meals?date=eq.${dateStr}&name=eq.${encodeURIComponent(name)}&select=id`;
+  let res = await fetch(url, { headers: HEADERS });
+  const existing = await res.json();
+
+  if (existing && existing.length > 0) {
+    // 更新
+    const id = existing[0].id;
+    res = await fetch(`${API_BASE}/meals?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: HEADERS,
+      body: JSON.stringify({ breakfast, lunch })
+    });
+    return 'update';
+  } else {
+    // 新增
+    res = await fetch(`${API_BASE}/meals`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({ name, date: dateStr, breakfast, lunch })
+    });
+    return 'insert';
+  }
+}
+
+async function fetchHistoryNames() {
+  try {
+    const url = `${API_BASE}/meals?select=name&order=created_at.desc&limit=50`;
+    const res = await fetch(url, { headers: HEADERS });
+    if (res.ok) {
+      const data = await res.json();
+      const seen = {};
+      return data.filter(r => { const k = r.name; if (seen[k]) return false; seen[k] = true; return true; }).map(r => r.name);
+    }
+  } catch(e) {}
+  return [];
+}
+
+// ── 表单逻辑 ────────────────────────────────────────────
+async function initForm() {
+  historyNames = await fetchHistoryNames();
+  renderNameQuickSelect();
+
+  // 默认明天的日期
+  const tomorrow = addDays(new Date(), 1);
+  document.getElementById('form-main').style.display = 'block';
+  document.getElementById('resetBtn').style.display = 'none';
+  updateFormSummary();
+}
+
+function renderNameQuickSelect() {
+  const container = document.getElementById('nameQuickSelect');
+  if (historyNames.length === 0) { container.style.display = 'none'; return; }
+  container.style.display = 'flex';
+  container.innerHTML = historyNames.map(n =>
+    `<span class="name-tag" onclick="selectName('${n.replace(/'/g,"\\'")}')">${n}</span>`
+  ).join('');
+}
+
+function selectName(name) {
+  document.getElementById('nameInput').value = name;
+  document.querySelectorAll('.name-tag').forEach(t => t.classList.remove('selected'));
+  event.target.classList.add('selected');
+}
+
+async function submitForm() {
+  const name = document.getElementById('nameInput').value.trim();
+  if (!name) { showResult('请输入您的姓名', 'err'); return; }
+
+  const breakfast = document.getElementById('breakfastCb').checked;
+  const lunch = document.getElementById('lunchCb').checked;
+  const tomorrow = addDays(new Date(), 1);
+  const dateStr = formatDate(tomorrow);
+
+  const btn = document.querySelector('.btn-green');
+  btn.disabled = true; btn.textContent = '⏳ 提交中...';
+
+  try {
+    const mode = await submitMeal(name, dateStr, breakfast, lunch);
+    btn.textContent = '✓ 提交登记'; btn.disabled = false;
+    const msg = mode === 'update' ? `${name}，已更新！` : `${name}，提交成功！`;
+    showResult(msg, 'ok');
+    document.getElementById('resetBtn').style.display = 'block';
+    document.getElementById('form-main').style.display = 'none';
+    updateFormSummary();
+  } catch(e) {
+    btn.textContent = '✓ 提交登记'; btn.disabled = false;
+    showResult('提交失败，请稍后重试', 'err');
+  }
+}
+
+function showResult(msg, type) {
+  const el = document.getElementById('resultMsg');
+  el.textContent = msg;
+  el.className = 'result-msg result-' + type;
+}
+
+function resetForm() {
+  document.getElementById('form-main').style.display = 'block';
+  document.getElementById('resetBtn').style.display = 'none';
+  document.getElementById('resultMsg').style.display = 'none';
+}
+
+async function updateFormSummary() {
+  const tomorrow = addDays(new Date(), 1);
+  const dateStr = formatDate(tomorrow);
+  const rows = await fetchSummary(dateStr);
+  const container = document.getElementById('form-summary');
+
+  if (!rows || rows.length === 0) {
+    container.style.display = 'none';
+    return;
+  }
+
+  const bCount = rows.filter(r => r.breakfast).length;
+  const lCount = rows.filter(r => r.lunch).length;
+  container.style.display = 'block';
+  container.innerHTML = `
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-num">${bCount}</div>
+        <div class="summary-label">🌅 早餐人数</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-num">${lCount}</div>
+        <div class="summary-label">🍱 午餐人数</div>
+      </div>
+    </div>
+    <p style="font-size:12px;color:#999;text-align:center">已登记 ${rows.length} 人</p>
+  `;
+}
+
+// ── 管理后台 ────────────────────────────────────────────
+let adminDate = new Date();
+
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  if (page === 'admin') loadAdmin();
+}
+
+function switchAdminDate(offset) {
+  document.querySelectorAll('.date-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  adminDate = addDays(new Date(), parseInt(event.target.dataset.offset));
+  loadAdmin();
+}
+
+async function loadAdmin() {
+  const dateStr = formatDate(adminDate);
+  document.getElementById('adminDateLabel').textContent = displayDate(adminDate);
+
+  const rows = await fetchSummary(dateStr) || [];
+
+  const bCount = rows.filter(r => r.breakfast).length;
+  const lCount = rows.filter(r => r.lunch).length;
+  document.getElementById('breakfastCount').textContent = bCount;
+  document.getElementById('lunchCount').textContent = lCount;
+
+  // 早餐明细
+  const bNames = rows.filter(r => r.breakfast).map(r => r.name);
+  document.getElementById('breakfastList').innerHTML = bNames.length
+    ? `<table><tr><th>姓名</th><th>状态</th></tr>${bNames.map(n => `<tr><td>${n}</td><td><span class="badge-yes">✓ 吃早餐</span></td></tr>`).join('')}</table>`
+    : '<div class="empty">暂无数据</div>';
+
+  // 午餐明细
+  const lNames = rows.filter(r => r.lunch).map(r => r.name);
+  document.getElementById('lunchList').innerHTML = lNames.length
+    ? `<table><tr><th>姓名</th><th>状态</th></tr>${lNames.map(n => `<tr><td>${n}</td><td><span class="badge-yes">✓ 吃午餐</span></td></tr>`).join('')}</table>`
+    : '<div class="empty">暂无数据</div>';
+}
+
+// ── 初始化 ──────────────────────────────────────────────
+initForm();
+
+// 日期切换事件绑定
+document.getElementById('dateTabs').addEventListener('click', function(e) {
+  if (e.target.classList.contains('date-tab')) {
+    document.querySelectorAll('.date-tab').forEach(t => t.classList.remove('active'));
+    e.target.classList.add('active');
+    adminDate = addDays(new Date(), parseInt(e.target.dataset.offset));
+    loadAdmin();
+  }
+});
+
+// 回车提交
+document.getElementById('nameInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') submitForm();
+});
+</script>
+
+</body>
+</html>

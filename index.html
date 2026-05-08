@@ -206,7 +206,7 @@ td { padding: 10px 8px; border-bottom: 1px solid #f0f0f0; }
     <button class="btn btn-gray" id="resetBtn" style="display:none" onclick="resetForm()">返回修改</button>
   </div>
 
-  <div id="form-summary" class="card" style="display:none"></div>
+  <!-- 统计仅后台可见 -->
 
   <div class="admin-btn" onclick="openAdmin()">📊 管理后台</div>
   <div class="footer">食堂用餐统计系统</div>
@@ -341,7 +341,7 @@ async function initForm() {
   const tomorrow = addDays(new Date(), 1);
   document.getElementById('form-main').style.display = 'block';
   document.getElementById('resetBtn').style.display = 'none';
-  updateFormSummary();
+  // updateFormSummary removed
 }
 
 function renderNameQuickSelect() {
@@ -378,7 +378,7 @@ async function submitForm() {
     showResult(msg, 'ok');
     document.getElementById('resetBtn').style.display = 'block';
     document.getElementById('form-main').style.display = 'none';
-    updateFormSummary();
+    // updateFormSummary removed
   } catch(e) {
     btn.textContent = '✓ 提交登记'; btn.disabled = false;
     showResult('提交失败，请稍后重试', 'err');
